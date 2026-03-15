@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import bcrypt from "bcryptjs"
 import { sendVerificationCode, welcomeEmail } from "../utility/email.js";
 import { GenerateToken } from "../utility/token/generateToken.js";
+
 // ! This for newUser Register 
 export const Register = async(req,res)=>{
     try{
@@ -39,7 +40,6 @@ export const Register = async(req,res)=>{
         return res.status(500).json({success:false,message:"Internal server error"})
     }
 }
-
 // ! This is for verify your email
 export const verifyEmail = async(req,res)=>{
     try{
@@ -51,8 +51,10 @@ export const verifyEmail = async(req,res)=>{
         if(!findUser){
             return res.status(400).json({success:false,message:"Invalid or Expired verification Code"})
         }
+        if(!findUser.isVerified){
+            findUser.isVerified = true
+        }
         
-        findUser.isVerified = true
         findUser.verficationCode = undefined
         findUser.verficationCodeExpiresAt = undefined
         
@@ -89,6 +91,52 @@ export const resendVerificationCode = async(req,res)=>{
         return res.status(500).json({success:false,message:"Internal server error"})
     }
 }
+// ! resetPassword
+export const resetPasswordCode = async(req,res)=>{
+    try{
+        const {email}=req.body
+        // !
+        const user = await User.findOne({email})
+        if(!user){
+            return res.status(404).json({success:false,message:"Email is not registered. First Signup."})
+        }
+
+        const newCode = Math.floor(100000 + Math.random() * 900000).toString()
+        user.resetPasswordCode = newCode
+        user.resetPasswordExpiresAt = Date.now() + 15 * 60 * 1000;
+        await user.save()
+        await sendVerificationCode(user)
+        return res.status(200).json({success:true,message:"Reset Password OTP is sent to your email."})
+    }catch(error){
+        console.error("Reset Password : ",error)
+        return res.status(500).json({success:false,message:"Internal server error"})
+    }
+}
+// ! reset Password
+export const resetPassword = async(req,res)=>{
+    try{
+        const {email,otp,newPassword}=req.body
+        // !
+        if(!email || !otp || !newPassword){return res.status(400).json({success:false,message:"All fields are required"})}
+        const user = await User.findOne({email,resetPasswordCode:otp,resetPasswordExpiresAt:{$gt: Date.now()}})
+
+        if(!user){
+            return res.status(404).json({success:false,message:"Invalid OTP or Expired. Please try again"})
+        }
+
+        const salt = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hash(newPassword,salt)
+        user.password = hashedPassword
+        user.resetPasswordCode = undefined
+        user.resetPasswordExpiresAt = undefined
+
+        await user.save()
+        return res.status(200).json({success:true,message:"Password rest sucessfully"})
+    }catch(error){
+        console.error("Reset Password : ",error)
+        return res.status(500).json({success:false,message:"Internal server error"})
+    }
+}
 // ! for login user
 export const Signin = async(req,res)=>{
     try{
@@ -105,9 +153,12 @@ export const Signin = async(req,res)=>{
         }
         const isMatched = await bcrypt.compare(password,existingUser.password)
         if(!isMatched){
-            return res.status(400).json({success:false,message:"Invalid Credintials"})
+            return res.status(400).json({success:false,message:"Incorrect Password."})
         }
+        let now = new Date()
+        const indiaTime = new Date(now.getTime()+(5.5 *60 *60 *1000))
         
+        existingUser.lastLogin = indiaTime
         const token = GenerateToken(res,existingUser)
         await existingUser.save();
         
@@ -126,12 +177,26 @@ export const logout = (req,res)=>{
     }
     
 }
-
+// ! get all user for admin only
 export const GetAllUser = async(req,res)=>{
     try{
         const existingUser = await User.find()
         
         return res.status(200).json({success:true,message:"Product fetch successfully.",user:existingUser})
+    }catch(error){
+        console.error("Post Error:",error)
+        return res.status(500).json({success:false,message:"Internal server error",err:error.message})
+    }
+}
+// ! get user id
+export const UserId = async(req,res)=>{
+    try{
+        const userId = req.user.id
+        const existingUser = await User.findById(userId)
+        if(!existingUser){
+            return res.status(404).json({success:false,message:"Invalid. User"})
+        }
+        return res.status(200).json({success:true,message:"UserId successfully.",user:existingUser})
     }catch(error){
         console.error("Post Error:",error)
         return res.status(500).json({success:false,message:"Internal server error",err:error.message})

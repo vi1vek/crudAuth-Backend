@@ -9,6 +9,7 @@ export const isAdmin = async(req,res,next)=>{
         if(role==="user"){
             return res.status(404).json({message:"Access Denied. Admin only. "})
         }else{
+            // req.admin.id = id
             next()
         }
         

@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
     verficationCodeExpiresAt:{
         type: Date,
     },
-    resetPasswordToken:String,
+    resetPasswordCode:String,
     resetPasswordExpiresAt: Date,
     lastLogin:{
         type:Date,

@@ -12,7 +12,7 @@ export const sendVerificationCode = async(newUser)=>{
         html: Verification_Email_Template.replace("{verificationCode}",newUser.verficationCode).replace("{yourname}",newUser.name), // HTML version of the message
     });
 
-    console.log("Message sent:", info);
+    // console.log("Message sent:", info);
     // console.log(newUser.verficationCode);
     
     }catch(error){
@@ -31,7 +31,7 @@ export const welcomeEmail = async(email,name)=>{
         html: Welcome_Email_Template.replace("{name}",name), // HTML version of the message
     });
 
-    console.log("Message sent:", info);
+    // console.log("Message sent:", info);
     }catch(error){
         console.log(error);
         
