@@ -3,7 +3,7 @@ import Post from "../models/postModel.js";
 export const UserPost = async(req,res)=>{
     try{
         const{title,price}=req.body;
-        // ! (title price) This All Field Are Required 
+
         if(!title || !price){
             return res.status(400).json({success:false,message:"All fields required"})
         }  
